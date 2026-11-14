@@ -10,6 +10,7 @@ import SwiftUI
 struct OnboardingView: View {
     @State private var goalName = ""
     @State private var selectedDuration: GoalDuration = .week
+    var viewModel: LearningViewModel
     var body: some View {
         
         ZStack {
@@ -83,7 +84,11 @@ struct OnboardingView: View {
                 Spacer(minLength: 0)
                 
                 Button {
-
+                    viewModel.startLearning(
+                        goalName: goalName,
+                        duration: selectedDuration
+                        )
+                   
                 } label: {
                     Text("Start Learning")
                         .font(.system(size: 16))
@@ -97,6 +102,7 @@ struct OnboardingView: View {
                 .controlSize(.regular)
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 12)
+                .disabled(goalName.isEmpty)
                 
                 Text("You can edit your desire later")
                     .font(.system(size: 13))
@@ -114,5 +120,5 @@ struct OnboardingView: View {
 }
 
 #Preview {
-    OnboardingView()
+    OnboardingView(viewModel: LearningViewModel())
 }
