@@ -10,32 +10,41 @@ import SwiftUI
 
 struct ActivityView: View {
 
-    // MARK: - ViewModel
+    // MARK: - Properties
 
     var viewModel: LearningViewModel
+
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var currentTime = Date()
+
+    private let calendar = Calendar.current
+
+    // MARK: - Goal State
+
+    private var goalState: GoalState {
+        viewModel.goalState(at: currentTime)
+    }
 
     // MARK: - Week Dates
 
     private var weekDates: [Date] {
-        let calendar = Calendar.current
-
         guard let week = calendar.dateInterval(
             of: .weekOfYear,
-            for: Date()
+            for: currentTime
         ) else {
             return []
         }
 
-        return (0..<7).compactMap {
+        return (0..<7).compactMap { offset in
             calendar.date(
                 byAdding: .day,
-                value: $0,
+                value: offset,
                 to: week.start
             )
         }
     }
 
-    // MARK: - Day Colors
+    // MARK: - Calendar Colors
 
     private func dayColor(for date: Date) -> Color {
         switch viewModel.status(for: date) {
@@ -46,7 +55,7 @@ struct ActivityView: View {
             return Color("FreezeAccent").opacity(0.15)
 
         case nil:
-            return Calendar.current.isDateInToday(date)
+            return calendar.isDate(date, inSameDayAs: currentTime)
                 ? Color("L_Orange")
                 : .clear
         }
@@ -65,19 +74,55 @@ struct ActivityView: View {
         }
     }
 
-    // MARK: - View
+    // MARK: - Main View
 
     var body: some View {
         VStack(spacing: 0) {
 
-            // MARK: Header
+            activityHeader
+
+            weeklyCalendar
+
+            activityStatistics
+
+            if goalState == .active {
+                activeGoalContent
+            } else {
+                goalResultContent
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: .top
+        )
+        .background {
+            Color("AppBackground")
+                .ignoresSafeArea()
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            currentTime = Date()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                currentTime = Date()
+            }
+        }
+    }
+
+    // MARK: - Header
+
+    private var activityHeader: some View {
+        HStack(alignment: .top) {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Activity")
                     .font(.system(size: 28, weight: .bold))
 
                 Text(
-                    Date.now,
+                    currentTime,
                     format: .dateTime
                         .weekday(.wide)
                         .day()
@@ -86,87 +131,118 @@ struct ActivityView: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            // MARK: Weekly Calendar
+            Spacer()
 
-            HStack(spacing: 0) {
-                ForEach(weekDates, id: \.self) { date in
-                    VStack(spacing: 6) {
-                        Text(
-                            date,
-                            format: .dateTime.weekday(.narrow)
+            // Calendar Navigation
+            NavigationLink {
+                CalendarView(viewModel: viewModel)
+            } label: {
+                Image(systemName: "calendar")
+                    .font(.system(size: 16))
+                    .frame(width: 40, height: 40)
+            }
+            .buttonStyle(.glass)
+
+            // Edit Goal Navigation
+            NavigationLink {
+                EditGoalView(viewModel: viewModel)
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 16))
+                    .frame(width: 40, height: 40)
+            }
+            .buttonStyle(.glass)
+        }
+    }
+
+    // MARK: - Weekly Calendar
+
+    private var weeklyCalendar: some View {
+        HStack(spacing: 0) {
+
+            ForEach(weekDates, id: \.self) { date in
+                VStack(spacing: 6) {
+
+                    Text(
+                        date,
+                        format: .dateTime.weekday(.narrow)
+                    )
+                    .font(.system(size: 12, weight: .semibold))
+
+                    Text(date, format: .dateTime.day())
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(dayTextColor(for: date))
+                        .frame(width: 40, height: 40)
+                        .background(
+                            dayColor(for: date),
+                            in: Circle()
                         )
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.primary)
-
-                        Text(date, format: .dateTime.day())
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundStyle(dayTextColor(for: date))
-                            .frame(width: 44, height: 44)
-                            .background(
-                                dayColor(for: date),
-                                in: Circle()
-                            )
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.top, 20)
-
-            // MARK: Activity Statistics
-
-            HStack(spacing: 12) {
-
-                // Learned Days
-                VStack(spacing: 2) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color("D_Orange"))
-
-                    Text("\(viewModel.learnedDays) days")
-                        .font(.system(size: 16, weight: .semibold))
-
-                    Text("Learned")
-                        .font(.system(size: 12, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 90)
-                .glassEffect(
-                    .regular,
-                    in: .rect(cornerRadius: 24)
-                )
-
-                // Frozen Days
-                VStack(spacing: 2) {
-                    Image(systemName: "snowflake")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color("FreezeAccent"))
-
-                    Text("\(viewModel.freezesUsed) days")
-                        .font(.system(size: 16, weight: .semibold))
-
-                    Text("Freezed")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 90)
-                .glassEffect(
-                    .regular,
-                    in: .rect(cornerRadius: 24)
-                )
             }
-            .padding(.top, 8)
+        }
+        .padding(.top, 20)
+    }
+
+    // MARK: - Activity Statistics
+
+    private var activityStatistics: some View {
+        HStack(spacing: 12) {
+
+            // Learned Days
+            VStack(spacing: 2) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color("D_Orange"))
+
+                Text(viewModel.dayLabel(for: viewModel.learnedDays))
+                    .font(.system(size: 14, weight: .semibold))
+
+                Text("Learned")
+                    .font(.system(size: 12))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 82)
+            .glassEffect(
+                .regular,
+                in: .rect(cornerRadius: 24)
+            )
+
+            // Frozen Days
+            VStack(spacing: 2) {
+                Image(systemName: "snowflake")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color("FreezeAccent"))
+
+                Text(viewModel.dayLabel(for: viewModel.freezesUsed))
+                    .font(.system(size: 14, weight: .semibold))
+
+                Text("Frozen")
+                    .font(.system(size: 12))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 82)
+            .glassEffect(
+                .regular,
+                in: .rect(cornerRadius: 24)
+            )
+        }
+        .padding(.top, 8)
+    }
+
+    // MARK: - Active Goal Content
+
+    private var activeGoalContent: some View {
+        VStack(spacing: 0) {
 
             Spacer()
                 .frame(height: 48)
 
-            // MARK: Log as Learned Button
-
-            // Disable only when today's status is Learned.
-            // Allow switching from Frozen to Learned.
+            // Learned Button
             Button {
                 viewModel.logAsLearned()
+                currentTime = Date()
             } label: {
                 Text(
                     viewModel.isTodayLearned
@@ -186,16 +262,14 @@ struct ActivityView: View {
             .disabled(viewModel.isTodayLearned)
             .padding(.bottom, 48)
 
-            // MARK: Freeze Button
-
-            // Disable when Frozen or when no freezes remain.
-            // Allow switching from Learned to Frozen.
+            // Freeze Button
             Button {
                 viewModel.freezeDay()
+                currentTime = Date()
             } label: {
                 Text(
                     viewModel.isTodayFrozen
-                        ? "Freezed for a day"
+                        ? "Frozen for a day"
                         : "Freeze for a day"
                 )
                 .font(.system(size: 14, weight: .semibold))
@@ -214,13 +288,72 @@ struct ActivityView: View {
             .disabled(!viewModel.canFreeze)
             .padding(.bottom, 16)
 
-            // MARK: Freeze Usage
-
-            Text("\(viewModel.freezesUsed) out of 2 Freezes used")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // Freeze Usage
+            Text(
+                "\(viewModel.freezesUsed) out of "
+                + "\(viewModel.freezeLimit) Freezes used"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 20)
+    }
+
+    // MARK: - Goal Result Content
+
+    private var goalResultContent: some View {
+        let completed = goalState == .completed
+
+        return VStack(spacing: 0) {
+
+            // Result Icon
+            Image(
+                systemName: completed
+                    ? "hands.clap.fill"
+                    : "xmark.seal"
+            )
+            .font(.system(size: 40))
+            .foregroundStyle(Color("D_Orange"))
+            .padding(.bottom, 16)
+
+            // Result Title
+            Text(
+                completed
+                    ? "Well done!"
+                    : "You didn't reach your goal this time."
+            )
+            .font(.system(size: 14, weight: .semibold))
+            .multilineTextAlignment(.center)
+            .padding(.bottom, 8)
+
+            // Result Description
+            Text(
+                completed
+                    ? "Ready for your next goal?"
+                    : "Want to set another goal?"
+            )
+            .font(.system(size: 13))
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+
+            // Set a Goal Button
+            Button {
+                viewModel.currentGoal = nil
+            } label: {
+                Label(
+                    "Set a goal",
+                    systemImage: "square.and.pencil"
+                )
+                .font(.system(size: 14))
+                .padding(.horizontal, 18)
+                .frame(height: 44)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(Color("D_Orange"))
+            .buttonBorderShape(.capsule)
+            .padding(.top, 64)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 56)
     }
 }
 
@@ -228,23 +361,13 @@ struct ActivityView: View {
 
 #Preview {
     let viewModel = LearningViewModel()
-    let calendar = Calendar.current
 
-    // Sample records for preview only.
-    for daysAgo in 1...4 {
-        if let date = calendar.date(
-            byAdding: .day,
-            value: -daysAgo,
-            to: Date()
-        ) {
-            viewModel.dailyRecords.append(
-                DailyRecord(
-                    date: date,
-                    status: .learned
-                )
-            )
-        }
+    viewModel.startLearning(
+        goalName: "Swift",
+        duration: .week
+    )
+
+    return NavigationStack {
+        ActivityView(viewModel: viewModel)
     }
-
-    return ActivityView(viewModel: viewModel)
 }
