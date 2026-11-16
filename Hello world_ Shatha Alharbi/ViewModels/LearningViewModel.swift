@@ -66,7 +66,7 @@ class LearningViewModel {
     }
 
     func dayLabel(for count: Int) -> String {
-        "\(count) \(count == 1 ? "Day" : "Days")"
+        "\(count) \(count == 1 ? "day" : "days")"
     }
 
     // MARK: - Goal Management

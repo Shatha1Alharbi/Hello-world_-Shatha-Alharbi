@@ -91,7 +91,7 @@ struct ActivityView: View {
                 goalResultContent
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 13.5)
         .frame(
             maxWidth: .infinity,
             maxHeight: .infinity,
@@ -115,13 +115,15 @@ struct ActivityView: View {
 
     // MARK: - Header
 
-    private var activityHeader: some View {
-        HStack(alignment: .top, spacing: 0) {
 
-            // Title and Date
+    private var activityHeader: some View {
+        HStack(alignment: .center, spacing: 0) {
+
+            // MARK: - Title and Date
             VStack(alignment: .leading, spacing: 8) {
+
                 Text("Activity")
-                    .font(.system(size: 32, weight: .bold))
+                    .font(.system(size: 34, weight: .bold))
 
                 Text(
                     currentTime,
@@ -130,43 +132,58 @@ struct ActivityView: View {
                         .day()
                         .month(.wide)
                 )
-                .font(.system(size: 16))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 17, weight: .regular))                .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            // Calendar Button
+            
+            // MARK: - Calendar Button
             NavigationLink {
                 CalendarView(viewModel: viewModel)
             } label: {
+
                 Image(systemName: "calendar")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 36, height: 36)
+                    .font(.system(size: 24, weight: .medium))
                     .frame(width: 44, height: 44)
+                    .foregroundStyle(.white)
                     .contentShape(Circle())
+                    .glassEffect(
+                        .regular.interactive(),
+                        in: .circle
+                    )
+
+                
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
+        
+        .buttonStyle(.plain)
+        .offset(y: -4)
 
-            Spacer()
-                .frame(width: 12)
+        Spacer()
+            .frame(width: 12)
 
-            // Edit Button
+            // MARK: - Edit Button
             NavigationLink {
                 EditGoalView(viewModel: viewModel)
             } label: {
+
                 Image(systemName: "pencil.and.outline")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 36, height: 36)
+        .font(.system(size: 24, weight: .medium))
                     .frame(width: 44, height: 44)
+                    .foregroundStyle(.white)
                     .contentShape(Circle())
+                    .glassEffect(
+                        .regular.interactive(),
+                        in: .circle
+                    )
+
             }
-            .buttonStyle(.glass)
-            .buttonBorderShape(.circle)
-        }
+            .buttonStyle(.plain)
+            .offset(y: -4)
+
+
+
+        }.padding(.horizontal, 6.5)
     }
 
 
@@ -176,7 +193,7 @@ struct ActivityView: View {
         HStack(spacing: 0) {
 
             ForEach(weekDates, id: \.self) { date in
-                VStack(spacing: 6) {
+                VStack(spacing: 4) {
 
                     Text(
                         date,
@@ -187,7 +204,7 @@ struct ActivityView: View {
                     Text(date, format: .dateTime.day())
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(dayTextColor(for: date))
-                        .frame(width: 40, height: 40)
+                        .frame(width: 44, height: 44)
                         .background(
                             dayColor(for: date),
                             in: Circle()
@@ -196,8 +213,11 @@ struct ActivityView: View {
                 .frame(maxWidth: .infinity)
             }
         }
+        .frame(height: 66)
         .padding(.top, 20)
+        .padding(.horizontal, 6.5)
     }
+
 
 
     // MARK: - Activity Statistics
@@ -220,14 +240,16 @@ struct ActivityView: View {
                 Text("Learned")
                     .font(.system(size: 12, weight: .regular))
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 102)
+            .frame(width: 177, height: 102)
             .glassEffect(
                 .regular,
-                in: .rect(cornerRadius: 28)
+                in: .rect(
+                    cornerRadius: 34,
+                    style: .continuous
+                )
             )
 
-            // Frozen Days
+            // Freezed Days
             VStack(spacing: 4) {
 
                 Image(systemName: "snowflake")
@@ -242,15 +264,17 @@ struct ActivityView: View {
                 Text("Freezed")
                     .font(.system(size: 12, weight: .regular))
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 102)
+            .frame(width: 177, height: 102)
             .glassEffect(
                 .regular,
-                in: .rect(cornerRadius: 28)
-            )
-        }
-        .padding(.top, 8)
+                in: .rect(
+                    cornerRadius: 34,
+                    style: .continuous
+                )
+            )        }
+        .padding(.top, 12)
     }
+
 
 
     // MARK: - Active Goal Content
@@ -271,7 +295,7 @@ struct ActivityView: View {
                         ? "Logged as Learned"
                         : "Log as Learned"
                 )
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 272, height: 272)
                 .background(
@@ -280,6 +304,15 @@ struct ActivityView: View {
                         : Color("D_Orange"),
                     in: Circle()
                 )
+                .overlay {
+                    Circle()
+                        .strokeBorder(
+                            Color.white.opacity(0.15),
+                            lineWidth: 1
+                        )
+                        .allowsHitTesting(false)
+                }
+
             }
             .buttonStyle(.plain)
             .disabled(viewModel.isTodayLearned)
@@ -296,17 +329,21 @@ struct ActivityView: View {
                         ? "Frozen for a day"
                         : "Freeze for a day"
                 )
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(
                     viewModel.canFreeze ? .white : .gray
                 )
+
                 .frame(width: 272, height: 46)
-                .background(
-                    viewModel.canFreeze
-                        ? Color("FreezeAccent")
-                        : Color.gray.opacity(0.2),
-                    in: Capsule()
+                .glassEffect(
+                    .regular.tint(
+                        viewModel.canFreeze
+                            ? Color("FreezeAccent")
+                            : .gray
+                    ),
+                    in: .capsule
                 )
+
             }
             .buttonStyle(.plain)
             .disabled(!viewModel.canFreeze)
@@ -317,7 +354,7 @@ struct ActivityView: View {
                 "\(viewModel.freezesUsed) out of "
                 + "\(viewModel.freezeLimit) Freezes used"
             )
-            .font(.caption)
+            .font(.system(size: 14, weight: .regular))
             .foregroundStyle(.secondary)
         }
     }

@@ -5,29 +5,32 @@
 //  Created by Shatha Alharbi on 11/11/2026.
 //
 
+
 import SwiftUI
 
 struct DurationButton: View {
+
     let title: String
     let duration: GoalDuration
 
     @Binding var selectedDuration: GoalDuration
+
     private var isSelected: Bool {
         selectedDuration == duration
     }
-    
+
     var body: some View {
+
         Button {
             selectedDuration = duration
         } label: {
+
             Text(title)
-                .font(.system(size: 16))
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(isSelected ? .white : .secondary)
-                .fontWeight(.bold)
-            
-            .glassEffect(
+                .frame(width: 84, height: 46)
+                .contentShape(Capsule())
+                .glassEffect(
                     isSelected
                         ? .regular.tint(Color("D_Orange"))
                         : .regular,
@@ -36,7 +39,6 @@ struct DurationButton: View {
         }
         .buttonStyle(.plain)
     }
-    
 }
 
 #Preview {
@@ -46,4 +48,3 @@ struct DurationButton: View {
         selectedDuration: .constant(.week)
     )
 }
-
