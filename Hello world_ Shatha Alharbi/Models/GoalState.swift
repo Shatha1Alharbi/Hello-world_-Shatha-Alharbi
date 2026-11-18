@@ -14,3 +14,4 @@ enum GoalState {
     case completed
     case failed
 }
+

@@ -13,10 +13,21 @@ class LearningViewModel {
 
     // MARK: - Properties
 
+
     var currentGoal: LearningGoal?
     var dailyRecords: [DailyRecord] = []
+    
 
     private let calendar = Calendar.current
+
+    // MARK: - Storage Keys
+
+    private let goalKey = "savedLearningGoal"
+    private let recordsKey = "savedDailyRecords"
+    private let currentRecordsKey = "savedCurrentGoalRecords"
+    init() {
+        loadData()
+    }
 
     // Records belonging to the current goal only.
     private var currentGoalRecords: [DailyRecord] = []
@@ -78,10 +89,13 @@ class LearningViewModel {
         currentGoal = LearningGoal(
             goalName: goalName,
             duration: duration,
-            startDate: Date()        )
+            startDate: Date()
+        )
 
         // A new goal starts with a new streak.
         currentGoalRecords = []
+
+        saveData()
     }
 
     func updateGoal(
@@ -109,29 +123,44 @@ class LearningViewModel {
     // MARK: - Goal State
 
     func goalState(at now: Date = Date()) -> GoalState {
+
         guard let goal = currentGoal,
               let endDate = goalEndDate else {
             return .active
         }
 
-        let start = calendar.startOfDay(for: goal.startDate)
-        let today = calendar.startOfDay(for: now)
+        // The goal stays active until its duration ends.
+        guard now >= endDate else {
+            return .active
+        }
 
+        let start = calendar.startOfDay(for: goal.startDate)
+
+        // Give the final day its full 32-hour grace period.
+        guard let finalDay = calendar.date(
+            byAdding: .day,
+            value: -1,
+            to: endDate
+        ),
+        let finalDeadline = calendar.date(
+            byAdding: .hour,
+            value: 32,
+            to: finalDay
+        ) else {
+            return .failed
+        }
+
+        if goalStatus(for: finalDay) == nil &&
+           now <= finalDeadline {
+            return .active
+        }
+
+        // Check whether every day has been logged.
         var day = start
 
-        while day < endDate && day < today {
+        while day < endDate {
 
-            // Each day has 32 hours from its midnight
-            // to be marked as Learned or Frozen.
-            guard let deadline = calendar.date(
-                byAdding: .hour,
-                value: 32,
-                to: day
-            ) else {
-                return .failed
-            }
-
-            if now > deadline && goalStatus(for: day) == nil {
+            if goalStatus(for: day) == nil {
                 return .failed
             }
 
@@ -146,52 +175,10 @@ class LearningViewModel {
             day = nextDay
         }
 
-        // Wait until the goal duration has ended.
-        guard now >= endDate else {
-            return .active
-        }
-
-        // Allow the final day its full grace period.
-        guard let finalDay = calendar.date(
-            byAdding: .day,
-            value: -1,
-            to: endDate
-        ),
-        let finalDeadline = calendar.date(
-            byAdding: .hour,
-            value: 32,
-            to: finalDay
-        ) else {
-            return .failed
-        }
-
-        if now <= finalDeadline &&
-            goalStatus(for: finalDay) == nil {
-            return .active
-        }
-
-        // Every day must be covered by Learned or Freeze.
-        var checkDay = start
-
-        while checkDay < endDate {
-            guard goalStatus(for: checkDay) != nil else {
-                return .failed
-            }
-
-            guard let nextDay = calendar.date(
-                byAdding: .day,
-                value: 1,
-                to: checkDay
-            ) else {
-                return .failed
-            }
-
-            checkDay = nextDay
-        }
-
         return .completed
     }
 
+    
     var goalState: GoalState {
         goalState()
     }
@@ -237,23 +224,41 @@ class LearningViewModel {
 
     // MARK: - Daily Records
 
+
+
+
     func status(for date: Date) -> DayStatus? {
-        dailyRecords.first {
-            isSameDay($0.date, date)
-        }?.status
+        dailyRecords
+            .filter {
+                isSameDay($0.date, date)
+            }
+            .max {
+                $0.updatedAt < $1.updatedAt
+            }?
+            .status
     }
+
+
+
 
     private func saveStatus(
         _ status: DayStatus,
         for date: Date
     ) {
+        guard let goal = currentGoal else {
+            return
+        }
+
         let record = DailyRecord(
+            goalID: goal.id,
             date: date,
-            status: status
+            status: status,
+            updatedAt: Date()
         )
 
         // Update calendar history.
         if let index = dailyRecords.firstIndex(where: {
+            $0.goalID == goal.id &&
             isSameDay($0.date, date)
         }) {
             dailyRecords[index] = record
@@ -269,6 +274,8 @@ class LearningViewModel {
         } else {
             currentGoalRecords.append(record)
         }
+
+        saveData()
     }
 
     // MARK: - Learned
@@ -365,5 +372,76 @@ class LearningViewModel {
 
         return streak
     }
+    // MARK: - Data Persistence
+
+    private func saveData() {
+        let encoder = JSONEncoder()
+
+        if let goal = currentGoal,
+           let goalData = try? encoder.encode(goal) {
+            UserDefaults.standard.set(goalData, forKey: goalKey)
+        } else if currentGoal == nil {
+            UserDefaults.standard.removeObject(forKey: goalKey)
+        }
+
+        if let recordsData = try? encoder.encode(dailyRecords) {
+            UserDefaults.standard.set(recordsData, forKey: recordsKey)
+        }
+
+        if let currentData = try? encoder.encode(currentGoalRecords) {
+            UserDefaults.standard.set(currentData, forKey: currentRecordsKey)
+        }
+    }
+    
+
+    private func loadData() {
+        let decoder = JSONDecoder()
+
+        if let goalData = UserDefaults.standard.data(forKey: goalKey),
+           let savedGoal = try? decoder.decode(
+               LearningGoal.self,
+               from: goalData
+           ) {
+            currentGoal = savedGoal
+        }
+
+        if let recordsData = UserDefaults.standard.data(forKey: recordsKey),
+           let savedRecords = try? decoder.decode(
+               [DailyRecord].self,
+               from: recordsData
+           ) {
+            dailyRecords = savedRecords
+        }
+
+        if let currentData = UserDefaults.standard.data(forKey: currentRecordsKey),
+           let savedCurrentRecords = try? decoder.decode(
+               [DailyRecord].self,
+               from: currentData
+           ) {
+            currentGoalRecords = savedCurrentRecords
+        }
+
+        // Migrate legacy records belonging to the current goal.
+        if let goal = currentGoal {
+            for index in currentGoalRecords.indices {
+                if currentGoalRecords[index].goalID == nil {
+                    currentGoalRecords[index].goalID = goal.id
+                }
+            }
+
+            for currentRecord in currentGoalRecords {
+                if let index = dailyRecords.firstIndex(where: {
+                    $0.goalID == nil &&
+                    isSameDay($0.date, currentRecord.date) &&
+                    $0.status == currentRecord.status
+                }) {
+                    dailyRecords[index].goalID = goal.id
+                }
+            }
+        }
+
+        saveData()
+    }
+
 }
 
