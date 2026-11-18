@@ -608,116 +608,66 @@ struct ActivityView: View {
 
     private var goalResultContent: some View {
 
-        let completed = goalState == .completed
+          let completed = goalState == .completed
 
-        return VStack(spacing: 0) {
+          return VStack(spacing: 0) {
 
-            // MARK: - Result Icon
+              // MARK: - Result Icon
+              Group {
+                  if completed {
+                      Image("SuccessIcon")
+                          .resizable()
+                          .scaledToFit()
+                      .frame(width: 50, height: 51)
+                  } else {
+                      Image(systemName: "xmark.seal")
+                          .font(.system(size: 40))
+                          .foregroundStyle(Color("D_Orange"))
+                          .frame(width: 50, height: 52)
+                  }
+              }
+              .padding(.bottom, 19)
 
-            Group {
+              // MARK: - Result Title
+              Text(
+                  completed
+                      ? "Well done!"
+                      : "You didn't reach your goal this time."
+              )
+              .font(.system(size: 16, weight: .bold))
+              .foregroundStyle(.primary)
+              .multilineTextAlignment(.center)
 
-                if completed {
+              // MARK: - Result Description
+              Text(
+                  completed
+                      ? "Ready for your next goal?"
+                      : "Want to set another goal?"
+              )
+              .font(.system(size: 14, weight: .medium))
+              .foregroundStyle(.secondary)
+              .multilineTextAlignment(.center)
 
-                    Image("SuccessIcon")
+              // MARK: - Set a Goal Button
+              Button {
+                  viewModel.currentGoal = nil
+              } label: {
+                  Label(
+                      "Set a goal",
+                      systemImage: "pencil.and.outline"
+                  )
+                  .font(.system(size: 17, weight: .regular))
+                  .frame(height: 50)
+              }
+              .buttonStyle(.glassProminent)
+              .tint(Color("D_Orange"))
+              .buttonBorderShape(.capsule)
+              .padding(.top, 64)
 
-                        .resizable()
-
-                        .scaledToFit()
-
-                        .frame(width: 50, height: 52)
-
-                } else {
-
-                    Image(systemName: "xmark.seal")
-
-                        .font(.system(size: 40))
-
-                        .foregroundStyle(Color("D_Orange"))
-
-                        .frame(width: 50, height: 52)
-
-                }
-
-            }
-
-            .padding(.bottom, 16)
-
-            // Result Title
-
-            Text(
-
-                completed
-
-                    ? "Well done!"
-
-                    : "You didn't reach your goal this time."
-
-            )
-
-            .font(.system(size: 14, weight: .semibold))
-
-            .multilineTextAlignment(.center)
-
-            .padding(.bottom, 8)
-
-            // Result Description
-
-            Text(
-
-                completed
-
-                    ? "Ready for your next goal?"
-
-                    : "Want to set another goal?"
-
-            )
-
-            .font(.system(size: 13))
-
-            .foregroundStyle(.secondary)
-
-            .multilineTextAlignment(.center)
-
-            // Set a Goal Button
-
-            Button {
-
-                viewModel.currentGoal = nil
-
-            } label: {
-
-                Label(
-
-                    "Set a goal",
-
-                    systemImage: "square.and.pencil"
-
-                )
-
-                .font(.system(size: 14))
-
-                .padding(.horizontal, 18)
-
-                .frame(height: 44)
-
-            }
-
-            .buttonStyle(.glassProminent)
-
-            .tint(Color("D_Orange"))
-
-            .buttonBorderShape(.capsule)
-
-            .padding(.top, 64)
-
-        }
-
-        .frame(maxWidth: .infinity)
-
-        .padding(.top, 56)
-
-    }
-
+          }
+          .frame(maxWidth: .infinity)
+          .padding(.top, 56)
+      }
 } // End ActivityView
 
 // MARK: - Preview
@@ -741,3 +691,23 @@ struct ActivityView: View {
     }
 
 }
+
+/*#Preview("Goal Completed") {
+    NavigationStack {
+        ActivityView(
+            viewModel: LearningViewModel.previewGoal(
+                completed: true
+            )
+        )
+    }
+}*/
+
+/*#Preview("Goal Failed") {
+    NavigationStack {
+        ActivityView(
+            viewModel: LearningViewModel.previewGoal(
+                completed: false
+            )
+        )
+    }
+}*/

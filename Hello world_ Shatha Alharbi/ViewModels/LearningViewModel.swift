@@ -442,6 +442,61 @@ class LearningViewModel {
 
         saveData()
     }
+    
+    
+    //------------------------------------------------
+    
+#if DEBUG
+
+static func previewGoal(completed: Bool) -> LearningViewModel {
+
+    let model = LearningViewModel()
+    let calendar = Calendar.current
+
+    let startDate = calendar.date(
+        byAdding: .day,
+        value: -10,
+        to: calendar.startOfDay(for: Date())
+    )!
+
+    let goal = LearningGoal(
+        goalName: "Swift",
+        duration: .week,
+        startDate: startDate
+    )
+
+    model.currentGoal = goal
+
+    let records: [DailyRecord] = (0..<7).compactMap { day in
+
+        if !completed && day == 3 {
+            return nil
+        }
+
+        guard let date = calendar.date(
+            byAdding: .day,
+            value: day,
+            to: startDate
+        ) else {
+            return nil
+        }
+
+        return DailyRecord(
+            goalID: goal.id,
+            date: date,
+            status: .learned,
+            updatedAt: Date()
+        )
+    }
+
+    model.dailyRecords = records
+    model.currentGoalRecords = records
+
+    return model
+}
+
+#endif
+
 
 }
 
